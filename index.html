@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WOLF LABS HOMEWORK | Moods & Routines (A1)</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        void: '#121212',
+                        panel: '#181818',
+                        sysGreen: '#1DB954',
+                        sysRed: '#E22134',
+                        textMuted: '#b3b3b3'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { 
+            background-color: #000000; 
+            color: #FFFFFF; 
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Mobile App Container */
+        #app-container {
+            background-color: #121212;
+            box-shadow: 0 0 50px rgba(29, 185, 84, 0.05);
+            background-image: radial-gradient(circle at 50% 0%, rgba(29, 185, 84, 0.1), transparent 60%);
+        }
+
+        /* Option Buttons */
+        .option-btn {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid #282828;
+            background-color: #181818;
+        }
+        .option-btn:active { transform: scale(0.98); }
+        .option-btn.selected-wrong {
+            border-color: #E22134;
+            background-color: rgba(226, 33, 52, 0.1);
+            color: #E22134;
+            animation: shake 0.4s;
+        }
+        .option-btn.selected-correct {
+            border-color: #1DB954;
+            background-color: rgba(29, 185, 84, 0.15);
+            color: #1DB954;
+        }
+        .option-btn.disabled { opacity: 0.5; pointer-events: none; }
+
+        /* Terminal Auth Buttons */
+        .auth-btn { transition: all 0.2s; border: 2px solid #282828; }
+        .auth-btn:active { transform: scale(0.95); }
+        .auth-valid:hover:not(:disabled) { border-color: #1DB954; background: rgba(29, 185, 84, 0.1); color: #1DB954; }
+        .auth-corrupt:hover:not(:disabled) { border-color: #E22134; background: rgba(226, 33, 52, 0.1); color: #E22134; }
+
+        /* Bug Hunter Words */
+        .bug-word { transition: all 0.2s; border: 1px solid transparent; }
+        .bug-word:hover:not(.locked) { border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); }
+        .bug-word.bug-found { background: rgba(226, 33, 52, 0.3); border-color: #E22134; color: #ff6b6b; text-decoration: line-through; }
+        .bug-word.bug-wrong { opacity: 0.4; }
+
+        /* Animations */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        .slide-up-panel {
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1);
+        }
+        .slide-up-panel.show {
+            transform: translateY(0);
+        }
+
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Hide scrollbar */
+        ::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="flex justify-center min-h-screen bg-black">
+
+    <!-- Mobile Constraint Container -->
+    <div id="app-container" class="w-full max-w-md min-h-screen flex flex-col relative overflow-hidden">
+        
+        <!-- HEADER (Progress) -->
+        <header class="w-full p-6 pt-8 pb-4 z-20 bg-void/90 backdrop-blur-md hidden fixed top-0 border-b border-white/5" id="main-header">
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-graduation-cap text-sysGreen text-xl"></i>
+                    <span class="font-bold tracking-tight text-sm uppercase text-white/90">Wolf Labs</span>
+                </div>
+                <div class="text-sm font-bold text-gray-400 font-mono">
+                    <span id="current-step" class="text-white">1</span> / <span id="total-step">15</span>
+                </div>
+            </div>
+            <!-- Progress Bar -->
+            <div class="w-full h-1.5 bg-[#282828] rounded-full overflow-hidden">
+                <div id="progress-bar" class="h-full bg-sysGreen transition-all duration-300 rounded-full shadow-[0_0_10px_#1DB954]" style="width: 0%;"></div>
+            </div>
+        </header>
+
+        <!-- MAIN AREA -->
+        <main id="quiz-area" class="flex-grow flex flex-col justify-center p-6 pb-32 z-10 fade-in pt-24 relative">
+            <!-- Rendered by JS -->
+        </main>
+
+        <!-- SUCCESS PANEL (Bottom Fixed) -->
+        <div id="success-panel" class="fixed bottom-0 left-0 w-full max-w-md mx-auto bg-panel border-t border-sysGreen/50 p-6 z-50 slide-up-panel shadow-[0_-10px_40px_rgba(29,185,84,0.15)]">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-full border border-sysGreen/50 bg-sysGreen/20 flex items-center justify-center shadow-[0_0_15px_rgba(29,185,84,0.3)]">
+                        <i class="fa-solid fa-check text-sysGreen text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold tracking-widest text-sysGreen text-lg uppercase">Excellent!</h3>
+                        <p class="text-[10px] font-mono text-gray-400 tracking-widest uppercase">Answer accepted</p>
+                    </div>
+                </div>
+            </div>
+            <button onclick="nextStep()" class="w-full bg-sysGreen text-black font-bold text-lg py-4 rounded-full transition-transform active:scale-95 shadow-[0_0_15px_rgba(29,185,84,0.4)] tracking-widest uppercase">
+                Continue
+            </button>
+        </div>
+
+    </div>
+
+    <!-- ENGINE LOGIC -->
+    <script>
+        // 1. DATABASE (15 Mixed Exercises)
+        const steps = [
+            { type: "cover" },
+            
+            // Vocab & Meaning
+            { type: "quiz", icon: "💯", question: "If you do something 100% of the time, you _____ do it.", options: ["always", "sometimes"], correct: 0 },
+            { type: "quiz", icon: "🙈", question: "A person who is nervous to meet new people is _____.", options: ["outgoing", "shy"], correct: 1 },
+            { type: "quiz", icon: "❓", question: "\"_____ do you go to the gym?\"<br><br>\"I go on Mondays.\"", options: ["How often", "What time"], correct: 0 },
+            
+            // Grammar: Action Verbs
+            { type: "quiz", icon: "🎧", question: "I _____ to music when I study.", options: ["listen usually", "usually listen"], correct: 1 },
+            { type: "quiz", icon: "🥱", question: "He _____ tired after work.", options: ["is always", "always is"], correct: 0 },
+            
+            // Auth: True / False
+            { type: "auth", icon: "⚖️", question: "Is this correct?<br><br><span class='text-sysGreen font-bold'>\"She never goes to the party.\"</span>", correct: true },
+            { type: "auth", icon: "⚖️", question: "Is this correct?<br><br><span class='text-sysGreen font-bold'>\"I usually am very happy.\"</span>", correct: false },
+            
+            // Bug Hunter
+            { type: "bug", icon: "🐛", question: "Tap the word in the WRONG position:", text: "They go sometimes to the park.", bugWord: "sometimes" },
+            { type: "bug", icon: "🐛", question: "Tap the wrong word:", text: "How often are you study?", bugWord: "are" },
+            
+            // Vocab & State/Trait
+            { type: "quiz", icon: "🏃‍♂️", question: "I am an _____ person. I run every day.", options: ["active", "lazy"], correct: 0 },
+            { type: "quiz", icon: "⚖️", question: "I _____ feel sad, but today I am happy.", options: ["always", "sometimes"], correct: 1 },
+            
+            // Auth 
+            { type: "auth", icon: "⚖️", question: "Is this correct?<br><br><span class='text-sysGreen font-bold'>\"We are sometimes late.\"</span>", correct: true },
+            
+            // Bug Hunter
+            { type: "bug", icon: "🐛", question: "Tap the wrong word:", text: "He doesn't usually feels tired.", bugWord: "feels" },
+            
+            // Final Quizzes
+            { type: "quiz", icon: "🥳", question: "She is very _____. She loves to talk to everyone.", options: ["outgoing", "shy"], correct: 0 },
+            { type: "quiz", icon: "🚫", question: "I _____ my homework on Sundays. (0% of the time)", options: ["never do", "do never"], correct: 0 }
+        ];
+
+        // 2. STATE
+        let state = {
+            current: 0,
+            score: 0, 
+            firstTry: true,
+            isLocked: false
+        };
+
+        const totalQuizzes = steps.filter(s => s.type !== 'cover').length;
+
+        // 3. CORE FUNCTIONS
+        function init() {
+            renderStep();
+        }
+
+        function updateProgress() {
+            const quizIndex = state.current; 
+            const percent = (quizIndex / totalQuizzes) * 100;
+            document.getElementById('progress-bar').style.width = `${percent}%`;
+            document.getElementById('current-step').innerText = quizIndex || 1;
+            document.getElementById('total-step').innerText = totalQuizzes;
+        }
+
+        function renderStep() {
+            if (state.current >= steps.length) {
+                renderEndScreen();
+                return;
+            }
+
+            const step = steps[state.current];
+            const area = document.getElementById('quiz-area');
+
+            if (step.type === 'cover') {
+                document.getElementById('main-header').classList.add('hidden');
+                area.innerHTML = `
+                    <div class="fade-in flex flex-col items-center justify-center h-full text-center mt-4">
+                        <div class="w-56 h-56 rounded-full overflow-hidden shadow-[0_0_40px_rgba(29,185,84,0.3)] mb-8 border-4 border-sysGreen/20">
+                            <img src="https://images.unsplash.com/photo-1506784926709-22f1ec395907?auto=format&fit=crop&q=80&w=400" alt="Routines" class="w-full h-full object-cover opacity-80 grayscale">
+                        </div>
+                        <h1 class="text-4xl font-black text-white mb-2 tracking-tight leading-tight uppercase">Moods & Routines</h1>
+                        <p class="text-gray-400 font-mono tracking-widest text-[10px] mb-10 uppercase">General English • A1 Beginner</p>
+                        
+                        <div class="bg-panel border border-white/10 px-6 py-5 rounded-lg flex flex-col gap-3 mb-10 w-full text-left shadow-lg border-l-2 border-sysGreen">
+                            <p class="font-mono text-[10px] text-sysGreen tracking-widest uppercase border-b border-white/10 pb-2"><i class="fa-solid fa-list-check mr-2"></i>Objectives</p>
+                            <p class="text-sm text-gray-300 mt-2 leading-relaxed">Complete <strong class="text-white font-bold">15 mixed exercises</strong> focusing on personality vocabulary and Adverbs of Frequency.</p>
+                        </div>
+
+                        <button onclick="nextStep()" class="w-full bg-sysGreen text-black font-bold tracking-widest text-lg py-4 rounded-full transition-transform active:scale-95 shadow-[0_0_20px_rgba(29,185,84,0.4)] uppercase">
+                            Start Mission
+                        </button>
+                    </div>
+                `;
+            } else {
+                document.getElementById('main-header').classList.remove('hidden');
+                state.firstTry = true;
+                state.isLocked = false;
+                document.getElementById('success-panel').classList.remove('show');
+                updateProgress();
+
+                let contentHtml = '';
+
+                // MODE: QUIZ (Multiple Choice)
+                if (step.type === 'quiz') {
+                    let optionsHtml = '';
+                    step.options.forEach((opt, index) => {
+                        optionsHtml += `
+                            <button onclick="handleResult(${index === step.correct}, this)" class="option-btn w-full p-5 rounded-2xl text-left text-lg font-medium flex justify-between items-center mb-4">
+                                <span>${opt}</span>
+                                <i class="fa-solid fa-circle text-[#282828] text-sm indicator-icon"></i>
+                            </button>
+                        `;
+                    });
+                    contentHtml = optionsHtml;
+                } 
+                // MODE: AUTH (True or False)
+                else if (step.type === 'auth') {
+                    contentHtml = `
+                        <div class="grid grid-cols-2 gap-4 mt-6">
+                            <button onclick="handleResult(${step.correct === true}, this)" class="auth-btn auth-valid bg-panel text-white p-6 rounded-2xl font-bold uppercase tracking-widest flex flex-col items-center gap-3">
+                                <i class="fa-solid fa-check text-3xl"></i> Valid
+                            </button>
+                            <button onclick="handleResult(${step.correct === false}, this)" class="auth-btn auth-corrupt bg-panel text-white p-6 rounded-2xl font-bold uppercase tracking-widest flex flex-col items-center gap-3">
+                                <i class="fa-solid fa-xmark text-3xl"></i> Error
+                            </button>
+                        </div>
+                    `;
+                }
+                // MODE: BUG HUNTER (Tap the wrong word)
+                else if (step.type === 'bug') {
+                    let words = step.text.split(" ");
+                    let wordsHtml = words.map(w => {
+                        let cleanWord = w.replace(/[.,!?]/g, "");
+                        let isBug = cleanWord.toLowerCase() === step.bugWord.toLowerCase();
+                        return `<span class="bug-word inline-block mx-1 px-3 py-2 rounded-lg bg-white/5 border border-white/10 cursor-pointer font-bold" onclick="handleBugResult(${isBug}, this)">${w}</span>`;
+                    }).join(" ");
+                    
+                    contentHtml = `
+                        <div class="bg-black/50 p-6 rounded-2xl border border-sysGreen/30 text-2xl leading-loose text-center shadow-inner mt-4" id="bug-container">
+                            ${wordsHtml}
+                        </div>
+                    `;
+                }
+
+                area.innerHTML = `
+                    <div class="fade-in flex flex-col h-full justify-center mt-4">
+                        <div class="w-20 h-20 bg-panel border border-white/10 rounded-full flex items-center justify-center text-4xl mb-8 shadow-lg shadow-sysGreen/10 mx-auto">
+                            ${step.icon}
+                        </div>
+                        <h2 class="text-2xl text-white mb-10 leading-relaxed font-bold text-center">${step.question}</h2>
+                        <div id="options-container" class="w-full">
+                            ${contentHtml}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Generic Response Logic
+        function handleResult(isCorrect, btnEl) {
+            if (state.isLocked) return;
+
+            if (isCorrect) {
+                state.isLocked = true;
+                
+                // Style depending on button type
+                if(btnEl.classList.contains('option-btn')) {
+                    btnEl.classList.add('selected-correct');
+                    let ind = btnEl.querySelector('.indicator-icon');
+                    if(ind) { ind.classList.replace('fa-circle', 'fa-check-circle'); ind.classList.replace('text-[#282828]', 'text-sysGreen'); }
+                } else if(btnEl.classList.contains('auth-btn')) {
+                    btnEl.style.borderColor = '#1DB954';
+                    btnEl.style.backgroundColor = 'rgba(29, 185, 84, 0.2)';
+                    btnEl.style.color = '#1DB954';
+                }
+
+                if (state.firstTry) state.score++;
+
+                // Disable others
+                const allBtns = document.getElementById('options-container').querySelectorAll('button');
+                allBtns.forEach(b => { if (b !== btnEl) { b.disabled = true; b.style.opacity = '0.3'; } });
+
+                document.getElementById('success-panel').classList.add('show');
+                if (navigator.vibrate) navigator.vibrate(50);
+
+            } else {
+                state.firstTry = false;
+                
+                // Error Style
+                if(btnEl.classList.contains('option-btn')) {
+                    btnEl.classList.add('selected-wrong');
+                    let ind = btnEl.querySelector('.indicator-icon');
+                    if(ind) { ind.classList.replace('fa-circle', 'fa-times-circle'); ind.classList.replace('text-[#282828]', 'text-sysRed'); }
+                    setTimeout(() => {
+                        btnEl.classList.remove('selected-wrong');
+                        if(ind) { ind.classList.replace('fa-times-circle', 'fa-circle'); ind.classList.replace('text-sysRed', 'text-[#282828]'); }
+                    }, 800);
+                } else if(btnEl.classList.contains('auth-btn')) {
+                    let oldBorder = btnEl.style.borderColor;
+                    btnEl.style.borderColor = '#E22134';
+                    btnEl.style.backgroundColor = 'rgba(226, 33, 52, 0.2)';
+                    btnEl.style.color = '#E22134';
+                    btnEl.style.animation = 'shake 0.4s';
+                    setTimeout(() => {
+                        btnEl.style.borderColor = oldBorder;
+                        btnEl.style.backgroundColor = '';
+                        btnEl.style.color = '';
+                        btnEl.style.animation = '';
+                    }, 800);
+                }
+
+                if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+            }
+        }
+
+        // Specific Logic for Bug Hunter
+        function handleBugResult(isBug, spanEl) {
+            if (state.isLocked) return;
+
+            if (isBug) {
+                state.isLocked = true;
+                spanEl.classList.add('bug-found');
+                
+                if (state.firstTry) state.score++;
+
+                // Fade out other words
+                const allSpans = document.getElementById('bug-container').querySelectorAll('span');
+                allSpans.forEach(s => { 
+                    s.classList.add('locked');
+                    if (s !== spanEl) s.classList.add('bug-wrong'); 
+                });
+
+                document.getElementById('success-panel').classList.add('show');
+                if (navigator.vibrate) navigator.vibrate(50);
+            } else {
+                state.firstTry = false;
+                spanEl.style.backgroundColor = 'rgba(226, 33, 52, 0.4)';
+                spanEl.style.borderColor = '#E22134';
+                spanEl.style.animation = 'shake 0.3s';
+                
+                if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+
+                setTimeout(() => {
+                    spanEl.style.backgroundColor = '';
+                    spanEl.style.borderColor = 'transparent';
+                    spanEl.style.animation = '';
+                }, 600);
+            }
+        }
+
+        function nextStep() {
+            state.current++;
+            renderStep();
+        }
+
+        function renderEndScreen() {
+            const area = document.getElementById('quiz-area');
+            const percent = Math.round((state.score / totalQuizzes) * 100);
+            
+            // Hide Header & Success panel
+            document.getElementById('main-header').classList.add('hidden');
+            document.getElementById('success-panel').classList.remove('show');
+
+            let message = "Mission Complete!";
+            let icon = "fa-star text-gray-300";
+            let colorClass = "text-white";
+
+            if (percent === 100) {
+                message = "Flawless!";
+                icon = "fa-trophy text-sysGreen drop-shadow-[0_0_15px_rgba(29,185,84,0.5)]";
+                colorClass = "text-sysGreen";
+            } else if (percent >= 80) {
+                message = "Good Job!";
+            } else {
+                message = "Needs Revision";
+            }
+
+            area.innerHTML = `
+                <div class="fade-in flex flex-col items-center text-center justify-center h-full pt-10">
+                    
+                    <div class="w-32 h-32 bg-panel rounded-full flex items-center justify-center text-6xl mb-6 shadow-2xl border border-white/5">
+                        <i class="fa-solid ${icon}"></i>
+                    </div>
+                    
+                    <h1 class="text-4xl font-black mb-2 ${colorClass} uppercase tracking-widest">${message}</h1>
+                    <p class="font-mono text-gray-500 text-xs tracking-widest mb-10 uppercase">Sync Complete.</p>
+                    
+                    <div class="bg-panel border border-white/10 p-8 rounded-3xl w-full max-w-sm shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+                        <p class="text-xs uppercase tracking-widest text-gray-400 font-mono mb-2">First Try Accuracy</p>
+                        <div class="text-6xl font-black text-white mb-2 drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">${percent}%</div>
+                        <p class="text-gray-400 text-sm">${state.score} out of ${totalQuizzes} challenges completed.</p>
+                    </div>
+
+                    <div class="mt-8 bg-black/50 border border-white/5 p-4 rounded-xl flex items-start gap-4 w-full">
+                        <i class="fa-solid fa-camera text-gray-400 mt-1"></i>
+                        <p class="text-xs text-left text-gray-400 font-mono leading-relaxed">Take a screenshot of this screen and send it to your teacher.</p>
+                    </div>
+
+                    <button onclick="location.reload()" class="mt-10 text-gray-500 hover:text-white font-mono text-[10px] uppercase tracking-widest transition-colors">
+                        [ Restart Mission ]
+                    </button>
+                </div>
+            `;
+        }
+
+        // Start
+        window.onload = init;
+    </script>
+</body>
+</html>
